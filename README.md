@@ -503,7 +503,7 @@ RecoverPay-AI/
 ## 1. Clone the repository
 
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+git clone <https://github.com/Rahul-pr-0503/RecoverPay-AI>
 cd RecoverPay-AI
 ```
 
