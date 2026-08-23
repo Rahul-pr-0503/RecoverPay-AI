@@ -473,7 +473,6 @@ def process_recovery(
 
         "recovered":
             transaction.recovered,
-
         "revenue_recovered":
             transaction.revenue_recovered,
     }
