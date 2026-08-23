@@ -16,6 +16,11 @@ from backend.app.razorpay_service import (
     create_recovery_payment_link,
 )
 
+from .auth import (
+    router as auth_router,
+    merchant_auth_middleware,
+)
+
 Base.metadata.create_all(bind=engine)
 
 
@@ -24,6 +29,7 @@ app = FastAPI(
     description="Agentic Revenue Recovery and Smart Retry System",
     version="0.4.0",
 )
+
 app.include_router(
     razorpay_router
 )
@@ -37,7 +43,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+app.middleware("http")(
+    merchant_auth_middleware
+)
+app.include_router(auth_router)
 
 @app.get("/")
 def root():

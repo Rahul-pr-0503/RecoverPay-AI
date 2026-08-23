@@ -1,0 +1,518 @@
+/* =========================================================
+   MERCHANT LOGIN
+========================================================= */
+
+.merchant-login-page {
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+  overflow: hidden;
+
+  padding: 24px;
+
+  background:
+    radial-gradient(
+      circle at top,
+      #18140c 0%,
+      #090909 38%,
+      #050505 100%
+    );
+
+  color: #f5f1e7;
+
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+
+.merchant-login-glow {
+  position: absolute;
+
+  width: 420px;
+  height: 420px;
+
+  border-radius: 50%;
+
+  filter: blur(100px);
+
+  opacity: 0.12;
+
+  pointer-events: none;
+}
+
+
+.merchant-login-glow-one {
+  top: -200px;
+  left: -120px;
+
+  background: #d7a844;
+}
+
+
+.merchant-login-glow-two {
+  right: -180px;
+  bottom: -220px;
+
+  background: #d7a844;
+}
+
+
+.merchant-login-card {
+  width: 100%;
+  max-width: 430px;
+
+  position: relative;
+  z-index: 2;
+
+  padding: 34px;
+
+  border:
+    1px solid
+    #2b271f;
+
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(20, 18, 14, 0.97),
+      rgba(10, 10, 9, 0.98)
+    );
+
+  box-shadow:
+    0 32px 100px
+    rgba(0, 0, 0, 0.55);
+}
+
+
+.merchant-login-brand {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  margin-bottom: 30px;
+}
+
+
+.merchant-login-logo {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+
+  background: #d9a83e;
+
+  color: #111;
+
+  font-size: 18px;
+  font-weight: 900;
+}
+
+
+.merchant-login-brand > div:last-child {
+  display: flex;
+  flex-direction: column;
+
+  gap: 2px;
+}
+
+
+.merchant-login-brand strong {
+  font-size: 17px;
+}
+
+
+.merchant-login-brand span {
+  color: #817b70;
+
+  font-size: 10px;
+}
+
+
+.merchant-login-badge {
+  width: fit-content;
+
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  padding: 6px 9px;
+
+  margin-bottom: 18px;
+
+  border:
+    1px solid
+    rgba(216, 168, 62, 0.25);
+
+  border-radius: 999px;
+
+  background:
+    rgba(216, 168, 62, 0.07);
+
+  color: #d8aa4e;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 0.08em;
+}
+
+
+.merchant-login-heading h1 {
+  margin:
+    0 0 8px;
+
+  font-size: 30px;
+  line-height: 1.15;
+}
+
+
+.merchant-login-heading p {
+  margin: 0;
+
+  color: #8b867e;
+
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+
+.merchant-login-form {
+  display: flex;
+  flex-direction: column;
+
+  gap: 17px;
+
+  margin-top: 26px;
+}
+
+
+.merchant-login-form label {
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+
+  color: #aaa49b;
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+
+.merchant-login-form > label > input,
+.merchant-password-input {
+  width: 100%;
+
+  border:
+    1px solid
+    #302c25;
+
+  border-radius: 10px;
+
+  background: #0d0d0c;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.merchant-login-form > label > input {
+  padding: 12px 13px;
+
+  color: #eee9df;
+
+  font: inherit;
+  font-size: 12px;
+
+  outline: none;
+}
+
+
+.merchant-password-input {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  padding-left: 12px;
+
+  color: #6d685f;
+}
+
+
+.merchant-password-input input {
+  width: 100%;
+
+  padding: 12px 12px 12px 0;
+
+  border: none;
+
+  background: transparent;
+
+  color: #eee9df;
+
+  font-size: 12px;
+
+  outline: none;
+}
+
+
+.merchant-login-form > label > input:focus,
+.merchant-password-input:focus-within {
+  border-color: #725a2b;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(216, 168, 62, 0.06);
+}
+
+
+.merchant-login-error {
+  padding: 10px 12px;
+
+  border:
+    1px solid
+    rgba(220, 100, 90, 0.24);
+
+  border-radius: 9px;
+
+  background:
+    rgba(220, 100, 90, 0.07);
+
+  color: #dd8b83;
+
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+
+.merchant-login-button {
+  min-height: 43px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #d8a63e;
+
+  color: #151109;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+
+.merchant-login-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+
+  background: #e3b553;
+}
+
+
+.merchant-login-button:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+
+.merchant-login-security {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 8px;
+
+  margin-top: 22px;
+  padding-top: 18px;
+
+  border-top:
+    1px solid
+    #24211c;
+
+  color: #6e6960;
+
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+
+.merchant-login-security svg {
+  flex-shrink: 0;
+
+  color: #8d733d;
+}
+
+
+/* =========================================================
+   ACTIVE MERCHANT SESSION
+========================================================= */
+
+.merchant-session-card {
+  position: fixed;
+
+  left: 20px;
+  bottom: 105px;
+
+  z-index: 1000;
+
+  width: 204px;
+
+  display: grid;
+
+  grid-template-columns:
+    auto
+    minmax(0, 1fr)
+    auto;
+
+  align-items: center;
+
+  gap: 9px;
+
+  padding: 10px;
+
+  border:
+    1px solid
+    #2b261e;
+
+  border-radius: 10px;
+
+  background:
+    rgba(20, 18, 14, 0.97);
+
+  box-shadow:
+    0 12px 35px
+    rgba(0, 0, 0, 0.3);
+}
+
+
+.merchant-session-icon {
+  width: 29px;
+  height: 29px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 7px;
+
+  background:
+    rgba(216, 168, 62, 0.1);
+
+  color: #d5a84d;
+}
+
+
+.merchant-session-info {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 2px;
+}
+
+
+.merchant-session-info span {
+  color: #d9b35d;
+
+  font-size: 9px;
+  font-weight: 800;
+}
+
+
+.merchant-session-info small {
+  overflow: hidden;
+
+  color: #706b63;
+
+  font-size: 7px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+.merchant-session-card button {
+  width: 28px;
+  height: 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border:
+    1px solid
+    #302a21;
+
+  border-radius: 7px;
+
+  background: #11100e;
+
+  color: #8f887f;
+
+  cursor: pointer;
+
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+
+.merchant-session-card button:hover {
+  border-color: #6c5430;
+
+  color: #e1b45c;
+}
+
+
+@media (max-width: 800px) {
+
+  .merchant-session-card {
+    left: auto;
+    right: 16px;
+    bottom: 16px;
+  }
+
+}
+
+
+@media (max-width: 520px) {
+
+  .merchant-login-card {
+    padding: 25px 20px;
+  }
+
+
+  .merchant-login-heading h1 {
+    font-size: 26px;
+  }
+
+}
