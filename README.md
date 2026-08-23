@@ -8,27 +8,27 @@ Instead of only reporting payment failures, RecoverPay AI detects revenue at ris
 
 ---
 
-## Problem
+## Problem Statement
 
 Failed digital payments directly translate into lost revenue.
 
-Traditional systems often:
+Traditional payment-monitoring systems often:
 
-- log payment failures,
-- show them on dashboards,
-- apply the same retry logic to every failure,
-- provide limited reasoning about why a payment failed,
-- and do not automatically close the recovery loop.
+- record failed transactions,
+- display failures on dashboards,
+- retry every failure using similar logic,
+- provide limited reasoning about the root cause,
+- and stop without verifying whether the lost revenue was actually recovered.
 
-A network timeout, insufficient funds, authentication failure, bank outage, and issuer decline should not necessarily receive the same recovery action.
+A network failure, insufficient funds, authentication failure, bank outage, or card decline should not necessarily receive the same recovery treatment.
 
-RecoverPay AI turns these failures into controlled and measurable recovery workflows.
+RecoverPay AI converts payment failures into **controlled, measurable, and auditable recovery workflows**.
 
 ---
 
-## Solution
+# Solution
 
-RecoverPay AI follows a guarded agentic workflow:
+RecoverPay AI follows this recovery lifecycle:
 
 ```text
 Detect
@@ -44,45 +44,109 @@ Act
 Measure
 ```
 
-For every failed payment, RecoverPay AI:
+For every failed payment, RecoverPay AI can:
 
-1. Detects the failed transaction.
-2. Calculates the revenue at risk.
-3. Classifies the payment failure.
-4. Sends contextual information to Groq.
-5. Generates an AI recovery recommendation.
-6. Validates the recommendation using deterministic policy rules.
-7. Executes an approved recovery intervention.
-8. Receives the resulting Razorpay webhook.
-9. Marks the original transaction as recovered when payment succeeds.
-10. Records the full journey in an audit trail.
+1. Detect the failed payment.
+2. Calculate the revenue at risk.
+3. Classify the failure reason.
+4. Send the transaction context to Groq.
+5. Generate a structured AI recovery recommendation.
+6. Validate the recommendation using deterministic policy rules.
+7. Execute an approved recovery intervention.
+8. Generate a Razorpay recovery payment link when applicable.
+9. Receive Razorpay success webhooks.
+10. Correlate the recovery payment with the original failed payment.
+11. Mark revenue as recovered.
+12. Record every important action in an audit trail.
+
+---
+
+# Merchant Admin Console
+
+RecoverPay includes a lightweight authenticated **Merchant Admin Console**.
+
+The merchant dashboard is not publicly accessible.
+
+```text
+Merchant Admin
+      ↓
+Email + Password
+      ↓
+FastAPI Authentication
+      ↓
+JWT Access Token
+      ↓
+Protected RecoverPay APIs
+      ↓
+Dashboard
+Transactions
+Recovery Agent
+Audit Trail
+```
+
+Merchant authentication protects access to:
+
+- Revenue recovery metrics
+- Razorpay recovery metrics
+- Transaction details
+- AI recovery decisions
+- Recovery actions
+- Batch recovery operations
+- Demo operations
+- Audit logs
+
+The Razorpay webhook does **not** require the merchant JWT because Razorpay calls that endpoint directly.
+
+Webhook security is handled independently using Razorpay HMAC signature verification.
+
+---
+
+# Authentication Security
+
+RecoverPay uses:
+
+- Merchant Admin authentication
+- PBKDF2-HMAC-SHA256 password hashing
+- Random password salt
+- Time-limited JWT access tokens
+- Session-scoped frontend authentication
+- Protected FastAPI endpoints
+- Razorpay HMAC-SHA256 webhook verification
+- Constant-time signature comparisons
+- Razorpay event idempotency
+
+The merchant's actual password is never stored directly in `.env`.
+
+Instead, a salted PBKDF2 password hash is stored.
 
 ---
 
 # Live Razorpay Test Mode Results
 
-RecoverPay AI has been tested end-to-end using actual **Razorpay Test Mode payment events**.
+RecoverPay AI has been tested end-to-end using **Razorpay Test Mode payment events**.
 
 | Metric | Result |
 |---|---:|
 | Failed Test Payments | 2 |
-| Recovered Test Payments | 2 |
 | Active Risk | 0 |
+| Recovered Test Payments | 2 |
 | Test Revenue Recovered | ₹20 |
 | Money Recovery Rate | 100% |
 
-> These values are **Razorpay Test Mode results** and do not represent production merchant revenue.
+> These values represent Razorpay **Test Mode** transactions and do not represent production merchant revenue.
 
-The tested flow was:
+Tested recovery flow:
 
 ```text
 Razorpay Test Payment
         ↓
 Payment Failure
         ↓
-payment.failed Webhook
+payment.failed
         ↓
-RecoverPay
+RecoverPay AI
+        ↓
+Root Cause Identification
         ↓
 Groq AI Decision
         ↓
@@ -94,14 +158,45 @@ Successful Test Payment
         ↓
 payment.captured / payment_link.paid
         ↓
-Original Revenue Risk Closed
+Original Payment Marked Recovered
 ```
+
+---
+
+# Razorpay Recovery Journey
+
+The RecoverPay dashboard displays each failed Razorpay payment as an end-to-end journey.
+
+```text
+FAILED
+   ↓
+AI DECISION
+   ↓
+RECOVERED
+```
+
+Example:
+
+```text
+₹10 Netbanking Payment
+
+FAILED
+Card Declined
+       ↓
+AI DECISION
+Recommend Alternate Method
+       ↓
+RECOVERED
+₹10 recovered
+```
+
+Each transaction also provides a **View Recovery Journey** option containing the complete audit trail.
 
 ---
 
 # Simulated Benchmark
 
-In addition to live Razorpay Test Mode integration, RecoverPay AI includes a deterministic 100-payment benchmark for evaluating recovery behavior at batch scale.
+RecoverPay also provides a deterministic 100-payment benchmark to evaluate the recovery engine at batch scale.
 
 | Metric | Result |
 |---|---:|
@@ -114,15 +209,27 @@ In addition to live Razorpay Test Mode integration, RecoverPay AI includes a det
 | Escalated Transactions | 10 |
 | Outstanding Risk | ₹45,540 |
 
-> These are **simulated benchmark results**, not real merchant transactions or production revenue.
+> These values are generated by the project's deterministic simulator and do not represent real merchant revenue.
 
-The live Razorpay metrics and simulated benchmark are deliberately separated in the dashboard.
+The dashboard deliberately separates:
+
+```text
+RAZORPAY TEST MODE
+Real integration proof
+```
+
+from:
+
+```text
+SIMULATED BENCHMARK
+Batch-scale recovery evaluation
+```
 
 ---
 
 # Recovery Actions
 
-The AI can recommend only actions from an explicitly bounded action space:
+The AI can recommend only actions from an explicitly bounded action space.
 
 ```text
 SMART_RETRY
@@ -133,29 +240,30 @@ ESCALATE_TO_HUMAN
 STOP_RECOVERY
 ```
 
-The AI recommendation is not executed blindly.
+The LLM recommendation is **not executed blindly**.
 
-RecoverPay's deterministic policy layer validates whether the proposed action is allowed for the transaction state and failure type.
+RecoverPay's deterministic policy engine validates the requested action before execution.
 
 ---
 
 # Guardrails
 
-RecoverPay AI implements bounded recovery rather than unlimited autonomous retries.
+RecoverPay implements bounded recovery instead of unrestricted autonomous execution.
 
 Key safeguards include:
 
 - Maximum retry limits
 - Transaction-state validation
-- Policy validation before execution
+- Deterministic policy validation
 - Human escalation
 - Stopping rules
 - Successful-state protection
 - Webhook idempotency
+- Duplicate-event protection
 - Late failure protection
 - Complete audit logging
 
-A workflow stops when:
+A recovery workflow stops when:
 
 ```text
 Payment Recovered
@@ -164,12 +272,12 @@ Maximum Attempts Reached
         OR
 Human Escalation Required
         OR
-Recovery Policy Stops Further Action
+Policy Prevents Further Recovery
 ```
 
 ---
 
-# Architecture
+# System Architecture
 
 ```mermaid
 flowchart TD
@@ -177,23 +285,28 @@ flowchart TD
     A[Razorpay Test Mode] -->|Signed Webhook| B[FastAPI Webhook Gateway]
 
     B --> C[HMAC Signature Verification]
-    C --> D[Event Idempotency Check]
+
+    C --> D[Event Idempotency]
 
     D --> E{Razorpay Event}
 
     E -->|payment.failed| F[Failure Classifier]
+
     E -->|payment.captured| M[Recovery Correlation]
+
     E -->|payment_link.paid| M
 
     F --> G[Revenue At Risk]
+
     G --> H[Groq AI Recovery Agent]
 
-    H --> I[Recovery Decision]
+    H --> I[Structured AI Decision]
 
     I --> J[Deterministic Policy Engine]
 
     J -->|Approved| K[Recovery Executor]
-    J -->|Unsafe / Limit Reached| L[Human Escalation / Stop]
+
+    J -->|Unsafe or Limit Reached| L[Escalate / Stop]
 
     K --> N[Razorpay Recovery Payment Link]
 
@@ -205,22 +318,77 @@ flowchart TD
 
     P --> Q[Mark Revenue Recovered]
 
-    Q --> R[Update Metrics]
+    Q --> R[Update Recovery Metrics]
 
     F --> S[Audit Log]
+
     H --> S
+
     J --> S
+
     K --> S
+
     M --> S
+
     Q --> S
 
-    S --> T[React Recovery Dashboard]
+    S --> T[React Merchant Dashboard]
+
     R --> T
 ```
 
 ---
 
-# Agent Architecture
+# Authentication Architecture
+
+```mermaid
+flowchart TD
+
+    A[Merchant Admin] --> B[RecoverPay Login]
+
+    B --> C[Email + Password]
+
+    C --> D[FastAPI Authentication]
+
+    D --> E[PBKDF2 Password Verification]
+
+    E -->|Valid| F[JWT Access Token]
+
+    E -->|Invalid| G[401 Unauthorized]
+
+    F --> H[React Merchant Console]
+
+    H --> I[Authorization Bearer Token]
+
+    I --> J[Protected FastAPI APIs]
+
+    K[Razorpay] --> L[Public Webhook Endpoint]
+
+    L --> M[HMAC SHA-256 Signature Verification]
+
+    M --> N[Webhook Processing]
+```
+
+The two security paths are intentionally separated:
+
+```text
+Merchant
+→ JWT Authentication
+→ Protected Dashboard APIs
+```
+
+and:
+
+```text
+Razorpay
+→ Signed Webhook
+→ HMAC Verification
+→ Webhook Processing
+```
+
+---
+
+# AI Agent Architecture
 
 RecoverPay separates probabilistic AI reasoning from deterministic execution.
 
@@ -229,28 +397,30 @@ flowchart LR
 
     A[Failed Payment Context] --> B[Groq LLM]
 
-    B --> C[
-    Structured Recovery Decision
-    ]
+    B --> C[Structured Recovery Decision]
 
     C --> D{Policy Validator}
 
     D -->|Allowed| E[Execute Recovery]
+
     D -->|Override| F[Safe Policy Action]
+
     D -->|Unsafe| G[Escalate / Stop]
 
     E --> H[Audit Log]
+
     F --> H
+
     G --> H
 ```
 
-This architecture ensures that the LLM can recommend actions without having unrestricted control over payment execution.
+This prevents the LLM from having unrestricted control over payment execution.
 
 ---
 
-# End-to-End Recovery Journey
+# Audit Trail
 
-A real Razorpay Test Mode recovery produced the following audit sequence:
+A successful Razorpay Test Mode recovery can produce an audit sequence such as:
 
 ```text
 RAZORPAY_WEBHOOK_RECEIVED
@@ -274,59 +444,59 @@ RECOVERY_SUCCESS
 RAZORPAY_PAYMENT_LINK_PAID
 ```
 
-The audit trail is visible directly from the RecoverPay frontend.
+The audit trail can be inspected directly from the RecoverPay Merchant Console.
 
 ---
 
 # Dashboard
 
-The RecoverPay dashboard provides two intentionally separated views.
+RecoverPay provides four major merchant views.
 
-## Razorpay Test Mode — Live
+### Dashboard
 
-Shows actual events received from Razorpay Test Mode:
+Shows:
 
-- Failed payments
-- Active risk
-- Recovered payments
-- Revenue recovered
-- Recovery rate
-- Individual recovery journeys
-
-Each live Razorpay transaction displays:
-
-```text
-FAILED
-   →
-AI DECISION
-   →
-RECOVERED
-```
-
-Users can open the full Recovery Journey and inspect its audit history.
-
-## Simulated Benchmark
-
-Shows large-batch evaluation metrics:
-
+- Razorpay Test Mode recovery metrics
+- Live Razorpay recovery journeys
+- Simulated benchmark metrics
 - Revenue at risk
 - Revenue recovered
-- Money recovery rate
+- Recovery rate
 - Outstanding risk
-- Payment failure distribution
+- Failure distribution
 - Recovery strategy distribution
+
+### Transactions
+
+Allows merchants to inspect individual transactions and their current recovery status.
+
+### Recovery Agent
+
+Displays the AI-driven revenue recovery workflow.
+
+### Audit Trail
+
+Provides visibility into recovery decisions and execution events.
 
 ---
 
-# Features
+# Key Features
 
 ### Payment Failure Detection
 
-Consumes Razorpay `payment.failed` webhooks and creates at-risk transactions.
+Consumes Razorpay:
 
-### Root-Cause Classification
+```text
+payment.failed
+```
 
-Maps payment errors into categories such as:
+events and creates revenue-at-risk records.
+
+---
+
+### Root Cause Classification
+
+Failure reasons may include:
 
 ```text
 insufficient_funds
@@ -339,23 +509,27 @@ bank_unavailable
 unknown_failure
 ```
 
+---
+
 ### AI Recovery Decisions
 
-Groq receives:
+Groq receives contextual transaction data including:
 
-- transaction amount,
-- payment method,
-- failure reason,
-- retry count,
-- maximum retries.
+```text
+Transaction amount
+Payment method
+Failure reason
+Retry count
+Maximum retry limit
+```
 
-It returns a structured decision containing:
+and produces a structured decision similar to:
 
 ```json
 {
-  "diagnosis": "...",
+  "diagnosis": "Payment method was declined",
   "action": "RECOMMEND_ALTERNATE_METHOD",
-  "reason": "...",
+  "reason": "Suggest a different payment method",
   "confidence": 0.85,
   "risk_level": "medium",
   "retry_delay_minutes": 0,
@@ -364,54 +538,61 @@ It returns a structured decision containing:
 }
 ```
 
+---
+
 ### Safe AI Fallback
 
-If the AI service becomes unavailable or produces an invalid response, RecoverPay switches to a deterministic fallback decision engine.
+If the AI provider becomes unavailable or returns an invalid structured response, RecoverPay uses a deterministic fallback recovery decision.
+
+---
 
 ### Razorpay Recovery Links
 
-For eligible Razorpay transactions, RecoverPay can create a new Razorpay Test Mode payment link programmatically.
+Eligible failed Razorpay transactions can receive a new Razorpay Test Mode Payment Link.
+
+---
 
 ### Recovery Correlation
 
-Successful recovery payments are correlated back to the original failed transaction.
+Successful recovery payments are correlated with the original failed transaction.
 
-The original transaction changes from:
+Transaction lifecycle:
 
 ```text
 at_risk
-```
-
-to:
-
-```text
+    ↓
 recovery_pending
-```
-
-and finally:
-
-```text
+    ↓
 recovered
 ```
 
+---
+
 ### Revenue Measurement
 
-RecoverPay records:
+RecoverPay measures:
 
 ```text
 revenue_at_risk
 revenue_recovered
 outstanding_risk
+transaction_recovery_rate
 money_recovery_rate
 ```
 
+---
+
 ### Live Recovery Polling
 
-The frontend monitors `recovery_pending` transactions and automatically refreshes when Razorpay confirms successful recovery.
+While a Razorpay transaction is in:
 
-### Audit Trail
+```text
+recovery_pending
+```
 
-Every important step is persisted and visible from the UI.
+the frontend automatically checks for updated recovery status.
+
+Once Razorpay confirms successful payment, the UI updates the transaction and revenue metrics.
 
 ---
 
@@ -434,25 +615,34 @@ Every important step is persisted and visible from the UI.
 - Pydantic
 - Uvicorn
 
+## Authentication
+
+- PyJWT
+- JWT Bearer Authentication
+- PBKDF2-HMAC-SHA256
+- Session Storage
+
 ## AI
 
 - Groq API
 - Structured LLM responses
-- Deterministic fallback engine
+- Deterministic fallback recovery engine
 
 ## Payments
 
 - Razorpay Test Mode
-- Razorpay Payment Links API
+- Razorpay Payment Links
 - Razorpay Webhooks
 
 ## Security
 
-- HMAC-SHA256 webhook verification
+- JWT merchant authentication
+- PBKDF2-HMAC-SHA256 password hashing
+- HMAC-SHA256 Razorpay webhook verification
 - Constant-time signature comparison
 - Event ID idempotency
-- Environment-variable secrets
-- Policy-controlled AI actions
+- Environment-variable secret management
+- Policy-controlled AI execution
 
 ---
 
@@ -465,6 +655,7 @@ RecoverPay-AI/
 │   └── app/
 │       ├── __init__.py
 │       ├── ai_agent.py
+│       ├── auth.py
 │       ├── database.py
 │       ├── main.py
 │       ├── models.py
@@ -483,81 +674,424 @@ RecoverPay-AI/
 │   │   │   └── TransactionsPage.jsx
 │   │   │
 │   │   ├── api.js
+│   │   ├── auth.js
+│   │   ├── AuthGate.jsx
+│   │   ├── AuthGate.css
 │   │   ├── App.jsx
 │   │   ├── App.css
 │   │   └── main.jsx
 │   │
 │   └── package.json
 │
-├── .env
+├── .env.example
 ├── .gitignore
-├── recoverpay.db
 ├── requirements.txt
 └── README.md
 ```
 
+Local files such as:
+
+```text
+.env
+recoverpay.db
+venv/
+node_modules/
+```
+
+are excluded from Git.
+
 ---
 
-# Local Setup
+# Installation
 
-## 1. Clone the repository
+## 1. Clone Repository
 
-```bash
-git clone <https://github.com/Rahul-pr-0503/RecoverPay-AI>
+```powershell
+git clone https://github.com/Rahul-pr-0503/RecoverPay-AI.git
 cd RecoverPay-AI
 ```
 
 ---
 
-## 2. Create Python virtual environment
+## 2. Create Python Virtual Environment
 
-### Windows
+Windows PowerShell:
 
 ```powershell
 python -m venv venv
+```
+
+Activate:
+
+```powershell
 .\venv\Scripts\Activate.ps1
 ```
 
 ---
 
-## 3. Install backend dependencies
+## 3. Install Backend Dependencies
 
-```bash
+```powershell
 pip install -r requirements.txt
+```
+
+Important backend packages include:
+
+```text
+FastAPI
+SQLAlchemy
+Groq
+Razorpay
+PyJWT
+python-dotenv
 ```
 
 ---
 
-## 4. Configure environment variables
+# Environment Configuration
 
-Create:
+Create a file named:
 
 ```text
 .env
 ```
 
-in the project root.
+in the root directory:
 
-Example:
+```text
+RecoverPay-AI/
+├── backend/
+├── frontend/
+├── .env
+├── .env.example
+├── requirements.txt
+└── README.md
+```
+
+Your `.env` will eventually contain:
 
 ```env
-GROQ_API_KEY=your_groq_api_key
+GROQ_API_KEY=your_real_groq_key
 
-RAZORPAY_KEY_ID=your_razorpay_test_key_id
-RAZORPAY_KEY_SECRET=your_razorpay_test_key_secret
+RAZORPAY_KEY_ID=your_real_test_key_id
+RAZORPAY_KEY_SECRET=your_real_test_key_secret
+RAZORPAY_WEBHOOK_SECRET=your_real_webhook_secret
 
-RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
+MERCHANT_ADMIN_EMAIL=admin@recoverpay.ai
+MERCHANT_ADMIN_PASSWORD_HASH=your_generated_hash
+JWT_SECRET=your_generated_jwt_secret
 ```
 
 Never commit `.env`.
 
 ---
 
-## 5. Start backend
+# Creating Merchant Admin Credentials
+
+RecoverPay does **not** store the Merchant Admin password as plaintext.
+
+You create a salted PBKDF2 password hash and store only the hash.
+
+## Step 1 — Choose Merchant Admin Email
+
+For example:
+
+```env
+MERCHANT_ADMIN_EMAIL=admin@recoverpay.ai
+```
+
+You can replace this with another merchant/admin email.
+
+---
+
+## Step 2 — Generate Merchant Password Hash
+
+From the project root, run this Windows PowerShell-safe command:
+
+```powershell
+python -c "import hashlib,secrets,getpass; p=getpass.getpass('Merchant admin password: '); s=secrets.token_bytes(16); i=260000; h=hashlib.pbkdf2_hmac('sha256',p.encode(),s,i); d=chr(36); print(str(i)+d+s.hex()+d+h.hex())"
+```
+
+You will see:
+
+```text
+Merchant admin password:
+```
+
+Type the password you want to use.
+
+The password will **not appear on the terminal while typing**. This is expected.
+
+Press Enter.
+
+The command prints a value similar to:
+
+```text
+260000$7a219d...$ba45e8...
+```
+
+Copy the **entire generated line**.
+
+Do not share this value publicly.
+
+Add it to `.env`:
+
+```env
+MERCHANT_ADMIN_PASSWORD_HASH=260000$YOUR_SALT$YOUR_HASH
+```
+
+Do not add:
+
+```env
+MERCHANT_ADMIN_PASSWORD=my_password
+```
+
+The plaintext password should never be stored in `.env`.
+
+---
+
+## Step 3 — Generate JWT Secret
+
+Run:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Example output:
+
+```text
+L1-example-random-secret-value-generated-by-python
+```
+
+Copy the generated value.
+
+Add it to `.env`:
+
+```env
+JWT_SECRET=PASTE_GENERATED_VALUE_HERE
+```
+
+Never commit this secret to GitHub.
+
+---
+
+## Step 4 — Final Merchant Authentication Configuration
+
+Your `.env` authentication section should now look like:
+
+```env
+MERCHANT_ADMIN_EMAIL=admin@recoverpay.ai
+MERCHANT_ADMIN_PASSWORD_HASH=260000$YOUR_GENERATED_SALT$YOUR_GENERATED_HASH
+JWT_SECRET=YOUR_GENERATED_RANDOM_JWT_SECRET
+```
+
+---
+
+## Step 5 — `.env.example`
+
+For GitHub, use placeholders only:
+
+```env
+GROQ_API_KEY=your_groq_api_key
+
+RAZORPAY_KEY_ID=your_razorpay_test_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_test_key_secret
+RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
+
+MERCHANT_ADMIN_EMAIL=admin@recoverpay.ai
+MERCHANT_ADMIN_PASSWORD_HASH=your_generated_pbkdf2_hash
+JWT_SECRET=your_generated_jwt_secret
+```
+
+`.env.example` can safely be committed.
+
+`.env` must remain ignored.
+
+---
+
+# Merchant Login
+
+Once the backend and frontend are running, open:
+
+```text
+http://localhost:5173
+```
+
+You should see:
+
+```text
+RecoverPay
+AI Revenue Recovery
+
+MERCHANT CONSOLE
+
+Welcome back
+
+Merchant Admin Email
+[                       ]
+
+Password
+[                       ]
+
+[ Sign In to RecoverPay ]
+```
+
+Use:
+
+```text
+Email:
+The value configured in MERCHANT_ADMIN_EMAIL
+
+Password:
+The plaintext password you originally entered when generating
+MERCHANT_ADMIN_PASSWORD_HASH
+```
+
+The plaintext password is only used during login.
+
+FastAPI hashes the submitted password again using the stored salt and compares the result securely.
+
+---
+
+# Merchant Session
+
+After successful login:
+
+```text
+Credentials
+     ↓
+POST /auth/login
+     ↓
+Password Verification
+     ↓
+JWT Generated
+     ↓
+Stored in sessionStorage
+     ↓
+Authorization: Bearer <token>
+     ↓
+Protected RecoverPay API
+```
+
+The JWT session currently expires after a limited period.
+
+Closing the browser tab removes the frontend `sessionStorage` authentication session.
+
+---
+
+# Authentication API
+
+## Login
+
+```http
+POST /auth/login
+```
+
+Example request:
+
+```json
+{
+  "email": "admin@recoverpay.ai",
+  "password": "your_password"
+}
+```
+
+Successful response:
+
+```json
+{
+  "access_token": "...",
+  "token_type": "bearer",
+  "expires_in": 28800,
+  "admin": {
+    "email": "admin@recoverpay.ai",
+    "role": "merchant_admin"
+  }
+}
+```
+
+---
+
+## Current Merchant
+
+```http
+GET /auth/me
+```
+
+Requires:
+
+```http
+Authorization: Bearer <JWT>
+```
+
+---
+
+# Testing Authentication
+
+## Public Health Endpoint
+
+Open:
+
+```text
+http://127.0.0.1:8000/health
+```
+
+It should work without Merchant authentication.
+
+---
+
+## Protected Endpoint
+
+While logged out, open:
+
+```text
+http://127.0.0.1:8000/metrics
+```
+
+Expected response:
+
+```json
+{
+  "detail": "Merchant authentication required."
+}
+```
+
+with:
+
+```text
+401 Unauthorized
+```
+
+---
+
+## Login Test
+
+Open:
+
+```text
+http://localhost:5173
+```
+
+Enter the Merchant Admin email and password.
+
+Successful login should open the RecoverPay dashboard.
+
+---
+
+## Logout Test
+
+Click the logout icon in the Merchant Admin sidebar card.
+
+You should immediately return to the login screen.
+
+---
+
+# Start Backend
 
 From the project root:
 
-```bash
+```powershell
 uvicorn backend.app.main:app --reload
 ```
 
@@ -575,9 +1109,11 @@ http://127.0.0.1:8000/docs
 
 ---
 
-## 6. Start frontend
+# Start Frontend
 
-```bash
+Open another PowerShell terminal:
+
+```powershell
 cd frontend
 npm install
 npm run dev
@@ -591,9 +1127,20 @@ http://localhost:5173
 
 ---
 
-# Razorpay Webhook Setup
+# Razorpay Configuration
 
-For local development, expose FastAPI through a secure public tunnel.
+Use Razorpay **Test Mode** credentials.
+
+Add:
+
+```env
+RAZORPAY_KEY_ID=your_razorpay_test_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_test_key_secret
+```
+
+---
+
+# Razorpay Webhook Configuration
 
 The webhook endpoint is:
 
@@ -601,7 +1148,9 @@ The webhook endpoint is:
 POST /razorpay/webhook
 ```
 
-Configure Razorpay Test Mode webhook events:
+For local development, expose FastAPI through a secure public tunnel.
+
+Configure these Razorpay Test Mode webhook events:
 
 ```text
 payment.failed
@@ -609,128 +1158,157 @@ payment.captured
 payment_link.paid
 ```
 
-Use the same value for the Razorpay dashboard webhook secret and:
+Create a webhook secret in Razorpay and store the same value locally:
 
 ```env
-RAZORPAY_WEBHOOK_SECRET=
+RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
 ```
 
-Do not use the Razorpay API Key Secret as the webhook secret.
+The webhook secret is different from:
 
----
-
-# Important API Endpoints
-
-## Health
-
-```http
-GET /health
-```
-
-## Simulation
-
-```http
-POST /simulate
-```
-
-## Fresh Benchmark Batch
-
-```http
-POST /demo/new-batch
-```
-
-## Transactions
-
-```http
-GET /transactions
-GET /transactions/{transaction_id}
-```
-
-## AI Decision
-
-```http
-GET /transactions/{transaction_id}/ai-decision
-```
-
-## Transaction Audit
-
-```http
-GET /transactions/{transaction_id}/audit
-```
-
-## Global Audit
-
-```http
-GET /audit
-```
-
-## Simulated Metrics
-
-```http
-GET /metrics
-```
-
-## Razorpay Test Mode Metrics
-
-```http
-GET /metrics/razorpay
-```
-
-## Recover Transaction
-
-```http
-POST /transactions/{transaction_id}/recover
-```
-
-## Batch Recovery
-
-```http
-POST /recover-all
-```
-
-## Create Razorpay Recovery Link
-
-```http
-POST /transactions/{transaction_id}/razorpay-recovery-link
-```
-
-## Razorpay Webhook
-
-```http
-POST /razorpay/webhook
+```env
+RAZORPAY_KEY_SECRET
 ```
 
 ---
 
 # Webhook Security
 
-RecoverPay does not trust incoming webhook JSON directly.
-
-The processing order is:
+RecoverPay verifies webhook authenticity before trusting the JSON payload.
 
 ```text
-Receive raw request body
-        ↓
+Webhook Request
+      ↓
+Read Raw Body
+      ↓
 Read X-Razorpay-Signature
-        ↓
+      ↓
 Generate HMAC SHA-256
-        ↓
-Constant-time signature comparison
-        ↓
-Check event idempotency
-        ↓
-Parse JSON
-        ↓
-Process event
+      ↓
+Constant-Time Signature Comparison
+      ↓
+Event Idempotency Check
+      ↓
+Parse Event
+      ↓
+Process Payment Event
 ```
 
-Duplicate webhook events are ignored using Razorpay event IDs.
+The webhook endpoint intentionally does not require Merchant JWT authentication.
+
+Razorpay authenticates through the webhook signature instead.
+
+---
+
+# Important API Endpoints
+
+## Public
+
+```http
+GET /
+GET /health
+POST /auth/login
+POST /razorpay/webhook
+```
+
+---
+
+## Merchant Protected
+
+```http
+GET /auth/me
+
+GET /metrics
+GET /metrics/razorpay
+
+GET /transactions
+GET /transactions/{transaction_id}
+
+GET /transactions/{transaction_id}/ai-decision
+GET /transactions/{transaction_id}/audit
+
+GET /audit
+
+POST /transactions/{transaction_id}/recover
+
+POST /transactions/{transaction_id}/razorpay-recovery-link
+
+POST /recover-all
+
+POST /simulate
+
+POST /demo/reset
+POST /demo/new-batch
+```
+
+Protected routes require:
+
+```http
+Authorization: Bearer <JWT>
+```
+
+---
+
+# Git Security
+
+The repository `.gitignore` excludes secrets and runtime files.
+
+Important ignored files include:
+
+```text
+.env
+recoverpay.db
+*.db
+venv/
+node_modules/
+__pycache__/
+*.pyc
+```
+
+Safe configuration documentation is provided through:
+
+```text
+.env.example
+```
+
+Before committing, you can verify:
+
+```powershell
+git status
+```
+
+Make sure `.env` is not staged.
+
+---
+
+# Running RecoverPay
+
+Start backend:
+
+```powershell
+uvicorn backend.app.main:app --reload
+```
+
+Start frontend:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:5173
+```
+
+Sign in using your Merchant Admin credentials.
 
 ---
 
 # Why RecoverPay AI?
 
-Most payment monitoring systems stop at:
+Many systems stop at:
 
 ```text
 Payment Failed
@@ -741,39 +1319,41 @@ RecoverPay continues:
 ```text
 Payment Failed
         ↓
-Why?
+Why did it fail?
         ↓
-What is the safest next action?
+What intervention is appropriate?
         ↓
-Execute
+Is that intervention allowed?
         ↓
-Did revenue return?
+Execute Recovery
         ↓
-How much?
+Did the customer pay?
+        ↓
+How much revenue returned?
 ```
-
-This converts payment analytics into measurable revenue recovery.
 
 ---
 
 # Key Differentiator
 
-RecoverPay AI is not only a payment-failure classifier.
+RecoverPay AI is not simply a payment failure classifier or analytics dashboard.
 
-It closes the entire revenue-recovery loop:
+It closes the full revenue-recovery loop:
 
 ```text
 Detection
 +
-AI Diagnosis
+Root Cause Diagnosis
 +
-Bounded Decision Making
+AI Decision
 +
-Payment Execution
+Deterministic Guardrails
++
+Razorpay Execution
 +
 Webhook Verification
 +
-Recovery Measurement
+Revenue Measurement
 +
 Auditability
 ```
@@ -786,58 +1366,65 @@ Auditability
 
 **Track 3 — AI Revenue Recovery**
 
-The project demonstrates:
+RecoverPay demonstrates:
 
-- Revenue-risk detection
-- Root-cause diagnosis
+- Revenue-at-risk detection
+- Failure diagnosis
 - AI-selected interventions
-- Bounded execution
+- Deterministic policy validation
+- Bounded recovery execution
 - Retry limits
 - Stopping rules
 - Human escalation
-- Measured recovery
-- Complete audit trail
-- Razorpay Test Mode integration
-
----
-
-# Disclaimer
-
-RecoverPay AI currently uses Razorpay **Test Mode** for payment integrations.
-
-The ₹20 live recovery result represents Test Mode transactions.
-
-The larger ₹1,53,849 recovery figure is produced from the project's deterministic simulated benchmark.
-
-Neither figure should be interpreted as production merchant revenue.
+- Razorpay-native recovery execution
+- Measured money recovery
+- Complete audit history
+- Authenticated Merchant Admin Console
 
 ---
 
 # Future Scope
 
-Potential production extensions include:
+Potential production enhancements include:
 
-- Merchant-specific recovery policies
-- SMS / WhatsApp recovery outreach
+- Multi-merchant authentication
+- Role-based access control
+- Finance and Support roles
+- PostgreSQL
+- Redis / Celery background workers
+- SMS recovery notifications
+- WhatsApp recovery campaigns
 - Email recovery campaigns
 - Subscription mandate recovery
 - Promise-to-pay workflows
 - Customer recovery scoring
+- Merchant-specific recovery policies
 - Experimentation across recovery strategies
-- Production-grade PostgreSQL
-- Background queues using Celery / Redis
-- Multi-merchant architecture
-- Production Razorpay integration
+- Production Razorpay deployment
 - Recovery attribution analytics
 
 ---
 
-# Team
+# Disclaimer
 
-Built for the **Razorpay Buildathon — Track 3: AI Revenue Recovery**.
+RecoverPay AI currently uses **Razorpay Test Mode** for payment integration.
+
+The ₹20 recovery result shown in the live Razorpay dashboard represents Test Mode transactions.
+
+The ₹1,53,849 recovery result comes from the project's deterministic 100-payment simulated benchmark.
+
+Neither value represents production merchant revenue.
 
 ---
 
-## RecoverPay AI
+# Repository
 
-**Turn payment failures into measurable recovery workflows.**
+```text
+https://github.com/Rahul-pr-0503/RecoverPay-AI
+```
+
+---
+
+# RecoverPay AI
+
+> **Turn payment failures into measurable recovery workflows.**
