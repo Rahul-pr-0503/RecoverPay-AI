@@ -404,20 +404,34 @@ function App() {
         // replacing the drawer with the loading screen.
         await refreshDashboardData();
 
-      } catch (err) {
+      } catch (error) {
 
         console.error(
           "Razorpay recovery link error:",
-          err
+          error
         );
 
+        const detail =
+          error.response?.data?.detail ||
+          "Unable to create Razorpay recovery link.";
 
-        setRecoveryLinkError(
-          err?.response
-            ?.data
-            ?.detail ||
-          "Unable to create Razorpay recovery link."
-        );
+        setRecoveryLinkError(detail);
+
+        // Refresh transaction + audit after a bounded policy decision
+        // such as ESCALATE_TO_HUMAN, without changing the error detail
+        // that drives the safe-escalation UI.
+        try {
+          await refreshSelectedTransaction(
+            transactionId
+          );
+
+          await refreshDashboardData();
+        } catch (refreshError) {
+          console.error(
+            "Unable to refresh after recovery-link decision:",
+            refreshError
+          );
+        }
 
       } finally {
 
@@ -1077,6 +1091,15 @@ const razorpayRecoveryTransactions =
     ].includes(
       selectedTransaction
         ?.status
+    );
+
+
+  const isHumanEscalationDecision =
+    Boolean(
+      recoveryLinkError &&
+      recoveryLinkError.includes(
+        "ESCALATE_TO_HUMAN"
+      )
     );
 
 
@@ -2965,7 +2988,8 @@ const razorpayRecoveryTransactions =
 
                     {
                       canGenerateRazorpayRecoveryLink &&
-                      !recoveryLinkResult && (
+                      !recoveryLinkResult &&
+                      !isHumanEscalationDecision && (
 
                         <button
                           className="razorpay-recovery-button"
@@ -3014,12 +3038,111 @@ const razorpayRecoveryTransactions =
                     }
 
 
+                    {/* =====================================================
+                        SAFE HUMAN ESCALATION
+                    ====================================================== */}
+
+                    {
+                      isHumanEscalationDecision && (
+
+                        <div className="human-escalation-card">
+
+                          <div className="human-escalation-header">
+
+                            <div className="human-escalation-icon">
+
+                              <ShieldAlert
+                                size={18}
+                              />
+
+                            </div>
+
+                            <div>
+
+                              <span className="human-escalation-eyebrow">
+                                AI SAFETY DECISION
+                              </span>
+
+                              <h4>
+                                Human Escalation Required
+                              </h4>
+
+                            </div>
+
+                          </div>
+
+
+                          <p>
+                            RecoverPay determined that an
+                            automated recovery payment link
+                            should not be created for this
+                            transaction.
+                          </p>
+
+
+                          <div className="human-escalation-flow">
+
+                            <div>
+
+                              <span>
+                                AI Decision
+                              </span>
+
+                              <strong>
+                                Escalate To Human
+                              </strong>
+
+                            </div>
+
+
+                            <span className="human-escalation-arrow">
+                              →
+                            </span>
+
+
+                            <div>
+
+                              <span>
+                                Automated Action
+                              </span>
+
+                              <strong>
+                                Stopped Safely
+                              </strong>
+
+                            </div>
+
+                          </div>
+
+
+                          <div className="human-escalation-note">
+
+                            <ShieldCheck
+                              size={14}
+                            />
+
+                            <span>
+                              No Razorpay recovery link was
+                              generated. The bounded recovery
+                              policy prevented automated
+                              execution.
+                            </span>
+
+                          </div>
+
+                        </div>
+
+                      )
+                    }
+
+
                     {/* =============================================
                         ERROR
                     ============================================== */}
 
                     {
-                      recoveryLinkError && (
+                      recoveryLinkError &&
+                      !isHumanEscalationDecision && (
 
                         <div className="recovery-error-box">
 

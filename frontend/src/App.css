@@ -2634,3 +2634,169 @@ tbody tr:hover {
   }
 
 }
+
+/* =========================================================
+   HUMAN ESCALATION / SAFE STOP
+========================================================= */
+
+.human-escalation-card {
+  margin-top: 12px;
+  padding: 15px;
+
+  border:
+    1px solid
+    rgba(220, 166, 69, 0.28);
+
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(216, 164, 66, 0.08),
+      rgba(18, 16, 12, 0.96)
+    );
+}
+
+
+.human-escalation-header {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+}
+
+
+.human-escalation-icon {
+  width: 36px;
+  height: 36px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 9px;
+
+  background:
+    rgba(221, 169, 70, 0.12);
+
+  color: #d9aa4e;
+}
+
+
+.human-escalation-eyebrow {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: #bd8f3d;
+
+  font-size: 8px;
+  font-weight: 800;
+
+  letter-spacing: 0.09em;
+}
+
+
+.human-escalation-header h4 {
+  margin: 0;
+
+  color: #e3bd70;
+
+  font-size: 13px;
+}
+
+
+.human-escalation-card > p {
+  margin:
+    13px 0;
+
+  color: #928b80;
+
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+
+.human-escalation-flow {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto
+    minmax(0, 1fr);
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 11px;
+
+  border:
+    1px solid
+    #2e2920;
+
+  border-radius: 9px;
+
+  background:
+    rgba(8, 8, 7, 0.45);
+}
+
+
+.human-escalation-flow > div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+
+.human-escalation-flow span {
+  color: #716b62;
+
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+
+.human-escalation-flow strong {
+  color: #c5a45f;
+
+  font-size: 10px;
+}
+
+
+.human-escalation-arrow {
+  color: #665431 !important;
+
+  font-size: 15px !important;
+}
+
+
+.human-escalation-note {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 7px;
+
+  margin-top: 11px;
+  padding-top: 11px;
+
+  border-top:
+    1px solid
+    #2b271f;
+
+  color: #837d73;
+
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+
+.human-escalation-note svg {
+  flex-shrink: 0;
+
+  color: #c79b4a;
+}
