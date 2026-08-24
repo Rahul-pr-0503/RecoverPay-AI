@@ -1,20 +1,29 @@
+import os
 import random
-from fastapi.middleware.cors import CORSMiddleware
+
+import razorpay
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from backend.app.recovery_service import process_recovery
+
+from backend.app.ai_agent import get_ai_recovery_decision
 from backend.app.database import Base, engine, get_db
 from backend.app.models import AuditLog, Transaction
-from backend.app.recovery_engine import get_recovery_strategy
-from backend.app.simulator import simulate_transactions
-from backend.app.ai_agent import get_ai_recovery_decision
+from backend.app.razorpay_service import (
+    create_recovery_payment_link,
+    verify_payment_signature,
+)
 from backend.app.razorpay_webhook import (
     router as razorpay_router,
 )
-from backend.app.razorpay_service import (
-    create_recovery_payment_link,
-)
+from backend.app.recovery_engine import get_recovery_strategy
+from backend.app.recovery_service import process_recovery
+from backend.app.simulator import simulate_transactions
+
+load_dotenv()
 
 from .auth import (
     router as auth_router,
@@ -62,6 +71,93 @@ def root():
 def health():
     return {
         "status": "healthy"
+    }
+
+
+class CreateOrderRequest(BaseModel):
+    amount: int
+    currency: str = "INR"
+    receipt: str = "recoverpay-ai-order"
+
+
+class VerifyPaymentRequest(BaseModel):
+    order_id: str
+    payment_id: str
+    razorpay_signature: str
+
+
+@app.post("/api/create-order")
+def create_order(payload: CreateOrderRequest):
+    if payload.amount < 100:
+        raise HTTPException(
+            status_code=400,
+            detail="Amount must be at least 100 paise.",
+        )
+
+    key_id = os.getenv("RAZORPAY_KEY_ID")
+    key_secret = os.getenv("RAZORPAY_KEY_SECRET")
+
+    if not key_id or not key_secret:
+        raise HTTPException(
+            status_code=401,
+            detail="Razorpay API credentials are not configured.",
+        )
+
+    try:
+        client = razorpay.Client(auth=(key_id, key_secret))
+        order = client.order.create(
+            {
+                "amount": int(payload.amount),
+                "currency": payload.currency,
+                "receipt": payload.receipt,
+            }
+        )
+
+        return {
+            "order_id": order["id"],
+            "amount": int(order["amount"]),
+            "currency": order["currency"],
+            "receipt": order.get("receipt"),
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create Razorpay order.",
+        ) from exc
+
+
+@app.post("/api/verify-payment")
+def verify_payment(payload: VerifyPaymentRequest):
+    if not payload.order_id or not payload.payment_id or not payload.razorpay_signature:
+        raise HTTPException(
+            status_code=400,
+            detail="order_id, payment_id, and razorpay_signature are required.",
+        )
+
+    key_secret = os.getenv("RAZORPAY_KEY_SECRET")
+
+    if not key_secret:
+        raise HTTPException(
+            status_code=401,
+            detail="Razorpay API credentials are not configured.",
+        )
+
+    is_valid = verify_payment_signature(
+        payload.order_id,
+        payload.payment_id,
+        payload.razorpay_signature,
+        key_secret,
+    )
+
+    if not is_valid:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid Razorpay payment signature.",
+        )
+
+    return {
+        "success": True,
+        "message": "Payment verified successfully.",
     }
 
 

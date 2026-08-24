@@ -374,4 +374,44 @@ export async function createRazorpayRecoveryLink(
 }
 
 
+export async function createRazorpayOrder({
+  amount,
+  currency = "INR",
+  receipt = "recoverpay-ai-order",
+}) {
+
+  const response =
+    await api.post(
+      "/api/create-order",
+      {
+        amount,
+        currency,
+        receipt,
+      }
+    );
+
+  return response.data;
+}
+
+
+export async function verifyRazorpayPayment({
+  order_id,
+  payment_id,
+  razorpay_signature,
+}) {
+
+  const response =
+    await api.post(
+      "/api/verify-payment",
+      {
+        order_id,
+        payment_id,
+        razorpay_signature,
+      }
+    );
+
+  return response.data;
+}
+
+
 export default api;

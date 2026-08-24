@@ -272,6 +272,9 @@ def is_public_route(
         "/health",
         "/auth/login",
 
+        "/api/create-order",
+        "/api/verify-payment",
+
         # Razorpay must be able to call this without JWT.
         # Security is handled through Razorpay HMAC signature.
         "/razorpay/webhook",

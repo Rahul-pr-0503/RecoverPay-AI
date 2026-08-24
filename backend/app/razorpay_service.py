@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import os
 import time
 
@@ -115,3 +117,36 @@ def create_recovery_payment_link(
         "amount":
             amount_rupees,
     }
+
+
+# =====================================================
+# STANDARD CHECKOUT SIGNATURE VERIFICATION
+# =====================================================
+
+
+def verify_payment_signature(
+    order_id: str,
+    payment_id: str,
+    razorpay_signature: str,
+    key_secret: str | None = None,
+) -> bool:
+
+    if not order_id or not payment_id or not razorpay_signature:
+        return False
+
+    secret = key_secret or os.getenv("RAZORPAY_KEY_SECRET")
+
+    if not secret:
+        return False
+
+    payload = f"{order_id}|{payment_id}".encode("utf-8")
+    expected_signature = hmac.new(
+        secret.encode("utf-8"),
+        payload,
+        hashlib.sha256,
+    ).hexdigest()
+
+    return hmac.compare_digest(
+        expected_signature,
+        razorpay_signature,
+    )

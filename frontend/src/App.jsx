@@ -43,6 +43,8 @@ import {
   createRazorpayRecoveryLink,
   getTransaction,
   getRazorpayMetrics,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
 } from "./api";
 
 import "./App.css";
@@ -125,6 +127,16 @@ function App() {
   const [
     error,
     setError,
+  ] = useState("");
+
+  const [
+    checkoutLoading,
+    setCheckoutLoading,
+  ] = useState(false);
+
+  const [
+    checkoutMessage,
+    setCheckoutMessage,
   ] = useState("");
 
 
@@ -212,21 +224,134 @@ function App() {
       getRazorpayMetrics(),
     ]);
 
-
     setMetrics(
       metricData
     );
-
 
     setRazorpayMetrics(
       razorpayMetricData
     );
 
-
     setTransactions(
       transactionData
         .transactions || []
     );
+  };
+
+
+  useEffect(() => {
+    const existingScript = document.getElementById(
+      "razorpay-checkout-script"
+    );
+
+    if (existingScript) {
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "razorpay-checkout-script";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
+
+
+  const handleRazorpayCheckout = async () => {
+    const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+    if (!keyId) {
+      setCheckoutMessage(
+        "Missing VITE_RAZORPAY_KEY_ID in frontend/.env."
+      );
+      return;
+    }
+
+    if (!window.Razorpay) {
+      setCheckoutMessage(
+        "Razorpay checkout script is still loading. Please try again in a moment."
+      );
+      return;
+    }
+
+    try {
+      setCheckoutLoading(true);
+      setCheckoutMessage("");
+
+      const order = await createRazorpayOrder({
+        amount: 49900,
+        currency: "INR",
+        receipt: "recoverpay-ai-checkout",
+      });
+
+      const razorpayOptions = {
+        key: keyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: "RecoverPay AI",
+        description: "Revenue Recovery Demo Payment",
+        order_id: order.order_id,
+        handler: async function (response) {
+          try {
+            await verifyRazorpayPayment({
+              order_id: response.razorpay_order_id,
+              payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+
+            setCheckoutMessage(
+              "Payment verified successfully."
+            );
+          } catch (error) {
+            const detail =
+              error.response?.data?.detail ||
+              "Payment verification failed.";
+
+            setCheckoutMessage(detail);
+          }
+        },
+        prefill: {
+          name: "RecoverPay Admin",
+          email: "admin@recoverpay.ai",
+          contact: "+919999999999",
+        },
+        notes: {
+          receipt: order.receipt,
+          source: "RecoverPay-AI",
+        },
+        theme: {
+          color: "#7c3aed",
+        },
+        modal: {
+          ondismiss: function () {
+            setCheckoutMessage(
+              "Payment was cancelled by the user."
+            );
+          },
+        },
+      };
+
+      const razorpayInstance = new window.Razorpay(
+        razorpayOptions
+      );
+
+      razorpayInstance.on("payment.failed", function (response) {
+        const message =
+          response.error?.description ||
+          "Payment failed.";
+
+        setCheckoutMessage(message);
+      });
+
+      razorpayInstance.open();
+    } catch (error) {
+      const detail =
+        error.response?.data?.detail ||
+        "Unable to start Razorpay checkout.";
+
+      setCheckoutMessage(detail);
+    } finally {
+      setCheckoutLoading(false);
+    }
   };
 
 
@@ -1376,6 +1501,23 @@ const razorpayRecoveryTransactions =
 
 
                   <button
+                    className="agent-button"
+                    onClick={
+                      handleRazorpayCheckout
+                    }
+                    disabled={
+                      checkoutLoading ||
+                      agentRunning ||
+                      generatingBatch
+                    }
+                  >
+                    {checkoutLoading
+                      ? "Opening Checkout..."
+                      : "Pay with Razorpay"}
+                  </button>
+
+
+                  <button
                     className="refresh-button"
                     onClick={
                       loadDashboard
@@ -1420,6 +1562,13 @@ const razorpayRecoveryTransactions =
 
                 )
               }
+
+              {checkoutMessage && (
+                <div className="agent-message">
+                  <ShieldCheck size={18} />
+                  <span>{checkoutMessage}</span>
+                </div>
+              )}
               {/* =============================================
     LIVE RAZORPAY TEST MODE
 ============================================== */}
